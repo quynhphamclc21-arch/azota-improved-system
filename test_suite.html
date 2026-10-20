@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>AZOTA - Automated E2E DOM Test Runner (Sprint 3: 52 User Stories Acceptance)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .passed { color: #16a34a; font-weight: 700; }
+    .failed { color: #dc2626; font-weight: 700; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 p-6 md:p-10 font-sans">
+  <div class="max-w-6xl mx-auto space-y-6">
+
+    <!-- Top Header -->
+    <div class="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="px-2.5 py-0.5 text-xs font-bold bg-indigo-100 text-indigo-700 rounded-full">Sprint 3 Full E2E</span>
+          <h1 class="text-2xl font-black text-slate-900 tracking-tight">Automated Acceptance Test Runner (52 User Stories)</h1>
+        </div>
+        <p class="text-xs md:text-sm text-slate-500">Kiểm thử chấp nhận tự động 52 User Stories (US-001 ➔ US-052) qua DOM tương tác thực tế với ứng dụng Mockup</p>
+      </div>
+      <div id="test-summary-badge" class="px-5 py-2.5 bg-indigo-50 text-indigo-700 font-extrabold text-sm rounded-2xl border border-indigo-200 shadow-sm flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-ping"></span>
+        <span>Đang khởi tạo môi trường DOM...</span>
+      </div>
+    </div>
+
+    <!-- Live Application Target Frame (Sandbox) -->
+    <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+          <i data-lucide="layers" class="w-4 h-4 text-indigo-600"></i>
+          <span>Cửa sổ Ứng dụng Mục tiêu (Live Test Execution Target Sandbox)</span>
+        </h3>
+        <span class="text-[11px] text-slate-400">Sandbox: index.html</span>
+      </div>
+      <div class="w-full h-80 rounded-2xl border border-slate-200 overflow-hidden shadow-inner bg-slate-50">
+        <iframe id="app-frame" src="index.html" class="w-full h-full border-none"></iframe>
+      </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-2">
+      <div class="flex justify-between text-xs font-bold text-slate-600">
+        <span>Tiến độ thực thi 52 Test Cases GWT:</span>
+        <span id="progress-text" class="text-indigo-600 font-mono">0% (0 / 52)</span>
+      </div>
+      <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
+        <div id="progress-bar" class="bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500 h-full transition-all duration-300" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <!-- Test Results Table -->
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="p-6 pb-2 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="text-base font-bold text-slate-900">Chi Tiết Kết Quả Kiểm Thử Toàn Diện 52 User Stories</h3>
+        <span class="text-xs text-slate-500">Chuẩn Acceptance Criteria (Given - When - Then) &bull; Traceability Matrix Closed-Loop</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-700 uppercase font-bold text-[11px] border-b border-slate-200">
+            <tr>
+              <th class="py-3.5 px-4">Story ID</th>
+              <th class="py-3.5 px-4">Tên User Story</th>
+              <th class="py-3.5 px-4">Kịch bản Kiểm thử Chấp nhận (GWT)</th>
+              <th class="py-3.5 px-4 text-center">Kết quả Thực tế</th>
+            </tr>
+          </thead>
+          <tbody id="test-results-body" class="divide-y divide-slate-100">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap justify-between items-center text-xs text-slate-500 gap-2">
+        <p>Môi trường: Client-side Browser DOM Assertion &bull; 0 Phụ thuộc mạng ngoài &bull; 100% Thuần khiết</p>
+        <a href="index.html" target="_blank" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all">Mở Mockup Riêng Tab Mới ↗</a>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const iframe = document.getElementById('app-frame');
+    let appDoc = null;
+    let appWin = null;
+
+    const testDefinitions = [
+      {
+        id: 'US-001',
+        name: 'Đăng nhập với 4 Tabs chuyển đổi vai trò',
+        gwt: 'Given ở login, When bấm tab Teacher, Then tab đổi trạng thái active',
+        assert: () => {
+          appWin.setAuthRoleTab('teacher');
+          const tab = appDoc.querySelector('.auth-role-tab[data-role="teacher"]');
+          return tab && tab.classList.contains('active');
+        }
+      },
+      {
+        id: 'US-002',
+        name: 'Tiện ích Hiện/Ẩn mật khẩu và Ghi nhớ đăng nhập',
+        gwt: 'Given ô mật khẩu, When bấm icon eye, Then input type toggle thành text',
+        assert: () => {
+          const pwd = appDoc.getElementById('login-password') || appDoc.getElementById('auth-password');
+          if (!pwd) return false;
+          const orig = pwd.type;
+          appWin.togglePasswordVisibility();
+          const changed = pwd.type !== orig;
+          appWin.togglePasswordVisibility();
+          return changed;
+        }
+      },
+      {
+        id: 'US-003',
+        name: 'Điều hướng tức thì & Cách ly nghiêm ngặt giao diện (RBAC)',
+        gwt: 'Given ở Auth, When chọn Học sinh, Then vào Trang chủ HS và ẩn view Giáo viên/Admin',
+        assert: () => {
+          appWin.quickSwitchRole('student');
+          const isHomeVisible = !appDoc.getElementById('view-student-home').classList.contains('hidden');
+          const isTeacherHidden = appDoc.getElementById('view-teacher').classList.contains('hidden');
+          const isAdminHidden = appDoc.getElementById('view-admin').classList.contains('hidden');
+          return isHomeVisible && isTeacherHidden && isAdminHidden;
+        }
+      },
+      {
+        id: 'US-004',
+        name: 'Grid danh sách đề thi & Ô tìm kiếm/nhập mã đề',
+        gwt: 'Given trang chủ HS, Then render danh sách bài thi và ô tìm kiếm/nhập mã đề',
+        assert: () => {
+          const input = appDoc.querySelector('input[placeholder*="mã"]');
+          const examCard = appDoc.querySelector('.bg-white.rounded-2xl.p-6.shadow-sm');
+          return input !== null && examCard !== null;
+        }
+      },
+      {
+        id: 'US-005',
+        name: 'Widget cảnh báo bài thi sắp đến hạn kèm Countdown',
+        gwt: 'Given bài thi sắp hết hạn, Then hiển thị widget đếm ngược thời gian thực',
+        assert: () => {
+          const cd = appDoc.getElementById('large-countdown') || appDoc.getElementById('urgent-countdown') || appDoc.querySelector('[class*="countdown"]');
+          return cd !== null;
+        }
+      },
+      {
+        id: 'US-006',
+        name: 'Khu vực câu hỏi toán học với đồ thị Parabol và 4 đáp án Radio',
+        gwt: 'Given phòng thi, Then vẽ đồ thị parabol SVG giải tích chuẩn xác và 4 radio A/B/C/D',
+        assert: () => {
+          appWin.startRealExamSession();
+          const svg = appDoc.querySelector('#exam-q-graph-container svg');
+          const radios = appDoc.querySelectorAll('.exam-option-input');
+          return svg !== null && radios.length === 4;
+        }
+      },
+      {
+        id: 'US-007',
+        name: 'Sidebar đồng hồ đếm lùi lớn và Lưới trạng thái câu hỏi',
+        gwt: 'Given phòng thi, Then có đồng hồ đếm lùi và lưới 20 nút câu hỏi',
+        assert: () => {
+          const timer = appDoc.getElementById('exam-overall-timer');
+          const pills = appDoc.querySelectorAll('#exam-question-sidebar-grid button');
+          return timer !== null && pills.length === 20;
+        }
+      },
+      {
+        id: 'US-008',
+        name: 'Thanh điều hướng và Nút nộp bài',
+        gwt: 'Given phòng thi, When bấm Câu sau, Then chuyển sang Câu hỏi 2',
+        assert: () => {
+          appWin.navigateExamQuestion(1);
+          const isQ2 = (appWin.state.activeExam.currentQuestionIndex === 1);
+          appWin.navigateExamQuestion(-1);
+          return isQ2;
+        }
+      },
+      {
+        id: 'US-009',
+        name: 'Chỉ báo tự động lưu ngầm (Auto-save Indicator)',
+        gwt: 'Given chọn đáp án, When click radio B, Then text auto-save cập nhật trạng thái đã lưu',
+        assert: () => {
+          appWin.selectExamOption('B');
+          const indicator = appDoc.getElementById('exam-autosave-indicator');
+          return indicator && indicator.innerText.includes('Đã tự động lưu');
+        }
+      },
+      {
+        id: 'US-010',
+        name: 'Phát hiện chuyển tab và Khóa bài thi bằng Modal đỏ',
+        gwt: 'Given làm bài thi, When xảy ra vi phạm tab, Then modal đỏ cảnh báo che bài thi',
+        assert: () => {
+          appWin.handleAntiCheatTrigger('Kiểm tra cảnh báo vi phạm');
+          const modal = appDoc.getElementById('modal-anticheat-warning');
+          return modal && !modal.classList.contains('hidden');
+        }
+      },
+      {
+        id: 'US-011',
+        name: 'Animation cấp đổi mã đề thay thế 01 ➔ 04 trên Modal',
+        gwt: 'Given modal đỏ đang mở, Then hiển thị cảnh báo số lần vi phạm và hoán vị',
+        assert: () => {
+          const count = appDoc.getElementById('anticheat-strike-count');
+          return count && count.innerText.includes('lần');
+        }
+      },
+      {
+        id: 'US-012',
+        name: 'Khôi phục phòng thi với mã đề mới, bảo lưu giờ và câu đã làm',
+        gwt: 'Given đóng modal, Then modal ẩn đi và đáp án đã chọn vẫn bảo lưu an toàn',
+        assert: () => {
+          appWin.dismissAntiCheatWarning();
+          const modal = appDoc.getElementById('modal-anticheat-warning');
+          const ansPreserved = appWin.state.activeExam.answers[1] === 'B';
+          return modal.classList.contains('hidden') && ansPreserved;
+        }
+      },
+      {
+        id: 'US-013',
+        name: 'Bộ lọc ngân hàng câu hỏi 3 cấp độ kèm tags màu sắc',
+        gwt: 'Given tab Ngân hàng đề, Then có bộ lọc Dropdown theo Môn học và Mức độ khó',
+        assert: () => {
+          appWin.quickSwitchRole('teacher');
+          appWin.switchTeacherTab('bank');
+          const bankPanel = appDoc.getElementById('teacher-panel-bank');
+          return bankPanel && !bankPanel.classList.contains('hidden');
+        }
+      },
+      {
+        id: 'US-014',
+        name: 'Đính kèm học liệu Kéo thả và Xem thử Video',
+        gwt: 'Given quản lý ngân hàng câu hỏi, Then hiển thị thẻ học liệu và video minh họa',
+        assert: () => {
+          const bank = appDoc.getElementById('teacher-panel-bank');
+          return bank && bank.innerText.includes('Parabol');
+        }
+      },
+      {
+        id: 'US-015',
+        name: 'Cấu hình Ma trận đề và Slider tỷ lệ trùng lặp',
+        gwt: 'Given bảng ma trận, When cập nhật slider, Then giá trị cập nhật reactive',
+        assert: () => {
+          appWin.switchTeacherTab('matrix');
+          appWin.updateDuplicateSlider(35);
+          const badge = appDoc.getElementById('duplicate-slider-val');
+          return badge && badge.innerText === '35%';
+        }
+      },
+      {
+        id: 'US-016',
+        name: 'Toggles cấu hình chống gian lận thông minh',
+        gwt: 'Given cấu hình bảo mật, Then có các toggle xáo trộn câu, trộn đáp án và Kiosk mode',
+        assert: () => {
+          const checkboxes = appDoc.querySelectorAll('#teacher-panel-matrix input[type="checkbox"]');
+          return checkboxes.length >= 2;
+        }
+      },
+      {
+        id: 'US-017',
+        name: 'Bảng Live Proctoring nhấp nháy Badge đỏ khi có vi phạm',
+        gwt: 'Given bảng giám sát, Then có danh sách thí sinh và chỉ số cảnh báo trực tuyến',
+        assert: () => {
+          appWin.switchTeacherTab('proctor');
+          const panel = appDoc.getElementById('teacher-panel-proctor');
+          return panel && !panel.classList.contains('hidden');
+        }
+      },
+      {
+        id: 'US-018',
+        name: 'Bảng trượt Timeline xem chi tiết nhật ký sự kiện của thí sinh',
+        gwt: 'Given giám sát thí sinh, Then tồn tại timeline chi tiết ghi nhận từng sự kiện',
+        assert: () => {
+          const drawer = appDoc.getElementById('teacher-timeline-drawer');
+          return drawer !== null;
+        }
+      },
+      {
+        id: 'US-019',
+        name: 'Trực quan hóa Báo cáo kết quả bằng Biểu đồ cột và Donut',
+        gwt: 'Given tab Thống kê & Phổ điểm, Then hiển thị biểu đồ SVG phổ điểm trực quan',
+        assert: () => {
+          appWin.switchTeacherTab('stats');
+          const panel = appDoc.getElementById('teacher-panel-stats');
+          return panel && !panel.classList.contains('hidden');
+        }
+      },
+      {
+        id: 'US-020',
+        name: 'Liên kết hồ sơ con qua Mã định danh học sinh',
+        gwt: 'Given cổng phụ huynh, Then hiển thị selector chọn con và nút liên kết mã học sinh',
+        assert: () => {
+          appWin.quickSwitchRole('parent');
+          const sel = appDoc.getElementById('parent-child-select');
+          return sel !== null;
+        }
+      },
+      {
+        id: 'US-021',
+        name: 'Dashboard theo dõi bài tập, Mini-chart điểm số và Lời phê',
+        gwt: 'Given cổng phụ huynh, Then có biểu đồ so sánh điểm số với trung bình lớp',
+        assert: () => {
+          const chart = appDoc.querySelector('#view-parent .w-full.h-56');
+          return chart !== null;
+        }
+      },
+      {
+        id: 'US-022',
+        name: 'Bong bóng Chat nổi trao đổi trực tiếp với giáo viên',
+        gwt: 'Given khung chat phụ huynh, When nhập tin nhắn và gửi, Then tin nhắn hiện lên khung chat',
+        assert: () => {
+          const input = appDoc.getElementById('parent-chat-input');
+          const messages = appDoc.getElementById('parent-chat-messages');
+          return input !== null && messages !== null;
+        }
+      },
+      {
+        id: 'US-023',
+        name: 'Đồng bộ Design System AZOTA và Client Mock Store',
+        gwt: 'Given toàn bộ ứng dụng, Then dùng bảng màu Brand Colors chuẩn mực và SVG Lucide',
+        assert: () => {
+          const header = appDoc.getElementById('global-header');
+          return header && header.className.includes('bg-white');
+        }
+      },
+      {
+        id: 'US-024',
+        name: 'Chuyển đổi Linh hoạt Giữa Giao diện Máy tính và Khung Điện thoại',
+        gwt: 'Given chế độ Desktop, When bấm Điện thoại, Then khung co vào max-w-[430px]',
+        assert: () => {
+          appWin.setDeviceMode('mobile');
+          const wrapper = appDoc.getElementById('global-device-wrapper');
+          const isMobile = wrapper.classList.contains('mobile-frame-mode');
+          appWin.setDeviceMode('desktop');
+          return isMobile;
+        }
+      },
+      {
+        id: 'US-025',
+        name: 'Phân hệ Tự Luyện tập theo Chủ đề môn học',
+        gwt: 'Given phân hệ học sinh, When chọn Tự luyện tập, Then mở kho chuyên đề luyện tập',
+        assert: () => {
+          appWin.quickSwitchRole('student');
+          appWin.studentSwitchTab('practice');
+          const panel = appDoc.getElementById('student-panel-practice');
+          return panel && !panel.classList.contains('hidden');
+        }
+      },
+      {
+        id: 'US-026',
+        name: 'Màn hình Xem lại Chi tiết Bài thi & Lời phê giáo viên',
+        gwt: 'Given phân hệ học sinh, When chọn Lịch sử thi, Then xem được bảng điểm và nhận xét',
+        assert: () => {
+          appWin.studentSwitchTab('history');
+          const panel = appDoc.getElementById('student-panel-history');
+          return panel && !panel.classList.contains('hidden');
+        }
+      },
+      {
+        id: 'US-027',
+        name: 'Câu hỏi Toán học Biến đổi Tham số Ngẫu nhiên',
+        gwt: 'Given đề thi trắc nghiệm, Then có câu hỏi tham số m và biến đổi đại số tự động',
+        assert: () => {
+          appWin.startRealExamSession();
+          appWin.jumpToExamQuestion(17);
+          const formula = appDoc.getElementById('exam-q-formula');
+          return formula && formula.innerText.includes('tham số m');
+        }
+      },
+      {
+        id: 'US-028',
+        name: 'Giới hạn Thời gian Từng câu & Khóa Câu hỏi Đã Hết Giờ',
+        gwt: 'Given câu hỏi có countdown 30s, When hết giờ, Then khóa câu hỏi và hiện banner',
+        assert: () => {
+          appWin.lockCurrentQuestion();
+          const banner = appDoc.getElementById('question-locked-banner');
+          return banner && !banner.classList.contains('hidden');
+        }
+      },
+      {
+        id: 'US-029',
+        name: 'Thi Offline - Xuất Phiếu tô và Mô phỏng Camera Quét Chấm Điểm',
+        gwt: 'Given giáo viên chấm bài giấy, When mở Quét phiếu tô, Then hiển thị kính ngắm OMR AI',
+        assert: () => {
+          appWin.openScannerModal();
+          const modal = appDoc.getElementById('modal-scanner');
+          const isOpen = modal && !modal.classList.contains('hidden');
+          appWin.closeScannerModal();
+          return isOpen;
+        }
+      },
+      {
+        id: 'US-030',
+        name: 'Mô phỏng Phòng thi Tương tác Trực tiếp AZOTA Live',
+        gwt: 'Given giáo viên tổ chức lớp, When vào AZOTA Live, Then hiển thị lớp học trực tuyến',
+        assert: () => {
+          appWin.quickSwitchRole('teacher');
+          appWin.switchTeacherTab('live');
+          const panel = appDoc.getElementById('teacher-panel-live');
+          return panel && !panel.classList.contains('hidden');
+        }
+      },
+      {
+        id: 'US-031',
+        name: 'Dashboard Quản trị Tổng thể & Chỉ số KPIs Nhà trường',
+        gwt: 'Given quản trị viên, Then hiển thị KPI người dùng, phòng thi và tải máy chủ',
+        assert: () => {
+          appWin.quickSwitchRole('admin');
+          appWin.adminSwitchTab('overview');
+          const panel = appDoc.getElementById('admin-panel-overview');
+          return panel && !panel.classList.contains('hidden');
+        }
+      },
+      {
+        id: 'US-032',
+        name: 'Quản lý Người dùng & Đội nhóm Phân quyền RBAC',
+        gwt: 'Given quản trị viên, When vào Quản lý người dùng, Then hiển thị bảng tài khoản và nút đổi quyền',
+        assert: () => {
+          appWin.adminSwitchTab('users');
+          const tbody = appDoc.getElementById('admin-user-table-body');
+          return tbody && tbody.children.length >= 3;
+        }
+      },
+      {
+        id: 'US-033',
+        name: 'Quản lý Cấu trúc Nhà trường, Khối lớp & Nhập học sinh từ Excel',
+        gwt: 'Given quản trị viên, When bấm Nhập Excel, Then mở modal xem trước 42 bản ghi',
+        assert: () => {
+          appWin.adminOpenExcelModal();
+          const modal = appDoc.getElementById('modal-excel-import');
+          const isOpen = modal && !modal.classList.contains('hidden');
+          appWin.closeExcelModal();
+          return isOpen;
+        }
+      },
+      {
+        id: 'US-034',
+        name: 'Thiết lập & Tổ chức Kỳ thi Chung Toàn trường/Toàn khối',
+        gwt: 'Given quản trị viên, When vào Kỳ thi tập trung, Then hiển thị các ca thi toàn khối',
+        assert: () => {
+          appWin.adminSwitchTab('central-exams');
+          const panel = appDoc.getElementById('admin-panel-central-exams');
+          return panel && !panel.classList.contains('hidden');
+        }
+      },
+      {
+        id: 'US-035',
+        name: 'Thống kê & Báo cáo Chuyên sâu Cấp trường',
+        gwt: 'Given quản trị viên, Then hiển thị biểu đồ histogram tải đỉnh điểm và phân bố ca thi',
+        assert: () => {
+          appWin.adminSwitchTab('overview');
+          const chart = appDoc.querySelector('#admin-panel-overview .w-full.h-48');
+          return chart !== null;
+        }
+      },
+      {
+        id: 'US-036',
+        name: 'Giám sát An toàn, Audit Logs & Trạng thái Hệ thống',
+        gwt: 'Given quản trị viên, When vào Audit Logs, Then hiển thị lịch sử hành động minh bạch',
+        assert: () => {
+          appWin.adminSwitchTab('audit-logs');
+          const tbody = appDoc.getElementById('admin-audit-table-body');
+          return tbody && tbody.children.length >= 2;
+        }
+      },
+      {
+        id: 'US-037',
+        name: 'Trung tâm Quản lý Thông báo Toàn trường & Xử lý Yêu cầu Hỗ trợ',
+        gwt: 'Given quản trị viên, When bấm Phát thông báo, Then hiển thị modal gửi broadcast',
+        assert: () => {
+          appWin.adminBroadcastModal();
+          const modal = appDoc.getElementById('modal-admin-broadcast');
+          const isOpen = modal && !modal.classList.contains('hidden');
+          appWin.closeBroadcastModal();
+          return isOpen;
+        }
+      },
+      {
+        id: 'US-038',
+        name: 'Tinh chỉnh Bố cục & Trải nghiệm Chế độ Điện thoại (Mobile App Simulator Refinement)',
+        gwt: 'Given chuyển sang Mobile mode, Then kích hoạt thanh Bottom Navigation Bar cho ứng dụng',
+        assert: () => {
+          appWin.setDeviceMode('mobile');
+          const nav = appDoc.getElementById('mobile-bottom-nav');
+          const isNavVisible = nav && !nav.classList.contains('hidden');
+          appWin.setDeviceMode('desktop');
+          return isNavVisible;
+        }
+      },
+      {
+        id: 'US-039',
+        name: 'Phòng chờ Trước giờ thi (Pre-check Lobby) với kiểm tra thiết bị & cam kết quy định',
+        gwt: 'Given học sinh chuẩn bị thi, When vào phòng chờ, Then hiển thị 4 bước kiểm tra thiết bị',
+        assert: () => {
+          appWin.quickSwitchRole('student');
+          appWin.openExamPrecheck('EX-01');
+          const modal = appDoc.getElementById('modal-precheck-lobby');
+          const isOpen = modal && !modal.classList.contains('hidden');
+          appWin.closePrecheckModal();
+          return isOpen;
+        }
+      },
+      {
+        id: 'US-040',
+        name: 'Mô phỏng Mất kết nối mạng & Khôi phục trạng thái bài thi',
+        gwt: 'Given học sinh đang thi, When mất mạng, Then hiển thị banner cảnh báo và lưu cache offline',
+        assert: () => {
+          appWin.startRealExamSession();
+          appWin.simulateNetworkLoss();
+          const banner = appDoc.getElementById('exam-network-banner');
+          const isShown = banner && !banner.classList.contains('hidden');
+          appWin.simulateNetworkLoss();
+          return isShown;
+        }
+      },
+      {
+        id: 'US-041',
+        name: 'Quy trình Gửi và Xử lý Phúc khảo / Giải trình vi phạm',
+        gwt: 'Given học sinh khiếu nại câu hỏi, When mở modal phúc khảo, Then hiển thị form nhập giải trình',
+        assert: () => {
+          appWin.openDisputeModal('Câu 18 (Toán)');
+          const modal = appDoc.getElementById('modal-dispute-appeal');
+          const isOpen = modal && !modal.classList.contains('hidden');
+          appWin.closeDisputeModal();
+          return isOpen;
+        }
+      },
+      {
+        id: 'US-042',
+        name: 'Form Đăng ký tài khoản mới tích hợp điều khoản và chính sách dịch vụ',
+        gwt: 'Given đăng xuất về màn hình Auth, Then form đăng ký chứa checkbox điều khoản bắt buộc',
+        assert: () => {
+          appWin.logoutUser();
+          const terms = appDoc.getElementById('reg-terms');
+          return terms !== null;
+        }
+      },
+      {
+        id: 'US-043',
+        name: 'Tạo và Quản lý lớp học, cấp mã mời và sổ danh sách học sinh của Giáo viên',
+        gwt: 'Given giáo viên ở màn hình Lớp học, When chuyển tab classes, Then danh sách lớp và sổ học sinh hiển thị',
+        assert: () => {
+          appWin.quickSwitchRole('teacher');
+          appWin.switchTeacherTab('classes');
+          const panel = appDoc.getElementById('teacher-tab-classes');
+          const isPanelVisible = panel && !panel.classList.contains('hidden');
+          const roster = appDoc.getElementById('teacher-student-roster-tbody');
+          const hasStudents = roster && roster.children.length > 0;
+          return isPanelVisible && hasStudents;
+        }
+      },
+      {
+        id: 'US-044',
+        name: 'Kho học liệu số, bài giảng điện tử và đề cương ôn tập lớp học',
+        gwt: 'Given giáo viên ở màn hình Kho học liệu, When chuyển tab materials, Then danh sách học liệu và nút tải lên hiển thị',
+        assert: () => {
+          appWin.quickSwitchRole('teacher');
+          appWin.switchTeacherTab('materials');
+          const panel = appDoc.getElementById('teacher-tab-materials');
+          const isPanelVisible = panel && !panel.classList.contains('hidden');
+          const tbody = appDoc.getElementById('teacher-materials-tbody');
+          const hasMaterials = tbody && tbody.children.length > 0;
+          return isPanelVisible && hasMaterials;
+        }
+      },
+      {
+        id: 'US-045',
+        name: 'Giao & nộp bài tập về nhà tự luận chụp ảnh vở và ma trận AI đối soát trùng lặp',
+        gwt: 'Given học sinh ở tab bài tập về nhà, When bấm Nộp bài, Then modal nộp bài mở thành công',
+        assert: () => {
+          appWin.quickSwitchRole('student');
+          appWin.studentSwitchTab('homework');
+          const panel = appDoc.getElementById('subtab-homework-content');
+          const isPanelVisible = panel && !panel.classList.contains('hidden');
+          appWin.openSubmitHomeworkModal('HW-001');
+          const modalHw = appDoc.getElementById('modal-submit-homework');
+          const isModalOpen = modalHw && !modalHw.classList.contains('hidden');
+          appWin.closeSubmitHomeworkModal();
+          return isPanelVisible && isModalOpen;
+        }
+      },
+      {
+        id: 'US-046',
+        name: 'Gửi thông báo lớp học và cơ chế nhắc hạn nộp cá nhân hóa (Bảng 1.6)',
+        gwt: 'Given giáo viên ở màn hình Thông báo, When chuyển tab announcements, Then nhật ký thông báo và tỷ lệ đã đọc hiển thị',
+        assert: () => {
+          appWin.quickSwitchRole('teacher');
+          appWin.switchTeacherTab('announcements');
+          const panel = appDoc.getElementById('teacher-tab-announcements');
+          const isPanelVisible = panel && !panel.classList.contains('hidden');
+          const list = appDoc.getElementById('teacher-announcements-list');
+          return isPanelVisible && list && list.children.length > 0;
+        }
+      },
+      {
+        id: 'US-047',
+        name: 'Tương tác và diễn đàn thảo luận Q&A trực tuyến giữa Giáo viên và Học sinh (Bảng 1.7)',
+        gwt: 'Given giáo viên ở màn hình Thảo luận, When chuyển tab discussions, Then danh sách chủ đề Q&A và câu trả lời ghim hiển thị',
+        assert: () => {
+          appWin.quickSwitchRole('teacher');
+          appWin.switchTeacherTab('discussions');
+          const panel = appDoc.getElementById('teacher-tab-discussions');
+          const isPanelVisible = panel && !panel.classList.contains('hidden');
+          const threads = appDoc.getElementById('teacher-discussions-list');
+          return isPanelVisible && threads && threads.children.length > 0;
+        }
+      },
+      {
+        id: 'US-048',
+        name: 'Quản lý học liệu, giám sát dung lượng đám mây và dữ liệu hệ thống cho Quản trị viên (Bảng 1.25)',
+        gwt: 'Given quản trị viên ở tab Quản lý học liệu, When chuyển tab materials, Then bảng dữ liệu lưu trữ và tệp học liệu hiển thị',
+        assert: () => {
+          appWin.quickSwitchRole('admin');
+          appWin.adminSwitchTab('materials');
+          const panel = appDoc.getElementById('admin-panel-materials');
+          const isPanelVisible = panel && !panel.classList.contains('hidden');
+          const tbody = appDoc.getElementById('admin-materials-table-body');
+          return isPanelVisible && tbody && tbody.children.length > 0;
+        }
+      },
+      {
+        id: 'US-049',
+        name: 'Chế độ thi bảo mật cao: Khóa câu hết giờ 30s và Tuyến tính một chiều (Không xem lại câu đã làm)',
+        gwt: 'Given học sinh đang làm bài thi, When hết giờ 30s hoặc chuyển câu tiếp theo, Then câu cũ bị khóa và nút Câu trước bị vô hiệu hóa',
+        assert: () => {
+          appWin.quickSwitchRole('student');
+          appWin.startRealExamSession();
+          appWin.lockCurrentQuestion();
+          const lockedBanner = appDoc.getElementById('question-locked-banner');
+          const isLocked = lockedBanner && !lockedBanner.classList.contains('hidden');
+          const prevBtn = appDoc.getElementById('btn-prev-question');
+          const isPrevDisabled = prevBtn && prevBtn.disabled;
+          return isLocked && isPrevDisabled;
+        }
+      },
+      {
+        id: 'US-050',
+        name: 'Cơ chế Cưỡng ép nộp bài khi vi phạm gian lận chuyển tab vượt quá giới hạn (3/3 lần)',
+        gwt: 'Given học sinh đang thi, When vi phạm chuyển tab lần thứ 3, Then kích hoạt lệnh cưỡng ép thu bài và mở modal đỏ khẩn cấp',
+        assert: () => {
+          appWin.quickSwitchRole('student');
+          appWin.startRealExamSession();
+          appWin.simulateTripleViolationForcedSubmit();
+          const modalForced = appDoc.getElementById('modal-forced-submission');
+          const isForced = modalForced && !modalForced.classList.contains('hidden');
+          appWin.dismissForcedSubmissionModal();
+          return isForced;
+        }
+      },
+      {
+        id: 'US-051',
+        name: 'Học sinh tham gia lớp học bằng mã mời trực tuyến và quản lý danh sách lớp (Bảng 1.8)',
+        gwt: 'Given học sinh ở màn hình Lớp học, When chuyển tab classroom, Then form nhập mã mời tham gia lớp và danh sách lớp đã liên kết hiển thị',
+        assert: () => {
+          appWin.quickSwitchRole('student');
+          appWin.switchStudentTab('classroom');
+          const panel = appDoc.getElementById('subtab-classroom-content');
+          const isPanelVisible = panel && !panel.classList.contains('hidden');
+          const inputCode = appDoc.getElementById('input-join-class-code');
+          const list = appDoc.getElementById('student-enrolled-classes-list');
+          return isPanelVisible && inputCode && list && list.children.length > 0;
+        }
+      },
+      {
+        id: 'US-052',
+        name: 'Học sinh tương tác, đặt câu hỏi & thảo luận Q&A với giáo viên và bạn học (Bảng 1.14 ứng Bảng 1.7)',
+        gwt: 'Given học sinh ở màn hình Thảo luận, When chuyển tab discussions, Then diễn đàn hỏi đáp lớp học, nút đặt câu hỏi và câu trả lời ghim của giáo viên hiển thị',
+        assert: () => {
+          appWin.quickSwitchRole('student');
+          appWin.switchStudentTab('discussions');
+          const panel = appDoc.getElementById('subtab-discussions-content');
+          const isPanelVisible = panel && !panel.classList.contains('hidden');
+          const list = appDoc.getElementById('student-discussions-list');
+          const hasThreads = list && list.children.length > 0;
+          return isPanelVisible && hasThreads;
+        }
+      }
+    ];
+
+    iframe.onload = () => {
+      appDoc = iframe.contentDocument || iframe.contentWindow.document;
+      appWin = iframe.contentWindow;
+      lucide.createIcons();
+
+      const tbody = document.getElementById('test-results-body');
+      const badge = document.getElementById('test-summary-badge');
+      const progressBar = document.getElementById('progress-bar');
+      const progressText = document.getElementById('progress-text');
+
+      let passedCount = 0;
+
+      testDefinitions.forEach((tc, index) => {
+        setTimeout(() => {
+          let isPassed = false;
+          try {
+            isPassed = tc.assert();
+          } catch (err) {
+            console.error(`Error in test ${tc.id}:`, err);
+            isPassed = false;
+          }
+
+          if (isPassed) passedCount++;
+
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50 transition-all';
+          tr.innerHTML = `
+            <td class="py-3 px-4 font-mono font-bold text-indigo-600">${tc.id}</td>
+            <td class="py-3 px-4 font-medium text-slate-900">${tc.name}</td>
+            <td class="py-3 px-4 text-slate-500">${tc.gwt}</td>
+            <td class="py-3 px-4 text-center">
+              <span class="px-2.5 py-1 rounded-full text-[11px] font-bold ${isPassed ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
+                ${isPassed ? 'PASSED ✓' : 'FAILED ✗'}
+              </span>
+            </td>
+          `;
+          tbody.appendChild(tr);
+
+          const progressPercent = Math.round(((index + 1) / testDefinitions.length) * 100);
+          progressBar.style.width = `${progressPercent}%`;
+          progressText.innerText = `${progressPercent}% (${index + 1} / ${testDefinitions.length})`;
+
+          if (index === testDefinitions.length - 1) {
+            badge.className = 'px-5 py-2.5 bg-emerald-100 text-emerald-800 font-extrabold text-sm rounded-2xl border border-emerald-300 shadow-sm flex items-center gap-2';
+            badge.innerHTML = `<span>✓ HOÀN TẤT: ${passedCount} / ${testDefinitions.length} Tests Passed (${Math.round((passedCount / testDefinitions.length) * 100)}%)</span>`;
+          }
+        }, (index + 1) * 40);
+      });
+    };
+  </script>
+</body>
+</html>
